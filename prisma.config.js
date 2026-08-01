@@ -1,10 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
+import "dotenv/config";
+import { defineConfig } from "prisma/config";
 
-// Pass the connection string to the driver adapter
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-
-// Pass the adapter into PrismaClient (Required in Prisma 7)
-const prisma = new PrismaClient({ adapter });
-
-module.exports = prisma;
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  datasource: {
+    // Use process.env with a fallback so prisma generate won't crash 
+    // if the environment variable isn't fully loaded yet during build
+    url: process.env.DATABASE_URL || "", 
+  },
+});
