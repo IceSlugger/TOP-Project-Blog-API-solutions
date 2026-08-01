@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
-import CreatePost from './CreatePost';
+import CreatePost from './src/CreatePost';
 import PostDetail from './PostDetail';
 import Login from './login';
 import Register from './Register';
