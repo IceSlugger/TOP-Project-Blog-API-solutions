@@ -11,7 +11,9 @@ export default function PostDetail() {
 
   const getCurrentUserId = () => {
     const token = localStorage.getItem('token');
+
     if (!token) return null;
+
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       return payload.id || payload.sub || payload.userId;
@@ -26,9 +28,11 @@ export default function PostDetail() {
     fetch(`${API_URL}/api/posts/${id}`)
       .then(async (res) => {
         const data = await res.json();
+
         if (!res.ok) {
           throw new Error(data.message || 'Failed to fetch post');
         }
+
         setPost(data);
       })
       .catch((err) => {
@@ -41,8 +45,49 @@ export default function PostDetail() {
     fetchPost();
   }, [id]);
 
+
+  // DELETE POST
+  const handleDeletePost = async () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this post?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/posts/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to delete post');
+      }
+
+      alert('Post deleted successfully');
+
+      window.location.href = '/';
+
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      alert(err.message);
+    }
+  };
+
+
+  // CREATE COMMENT
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
+
     const token = localStorage.getItem('token');
 
     if (!token) {
@@ -55,9 +100,11 @@ export default function PostDetail() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ content: commentText }),
+        body: JSON.stringify({
+          content: commentText
+        }),
       });
 
       const data = await res.json();
@@ -68,106 +115,292 @@ export default function PostDetail() {
 
       setCommentText('');
       fetchPost();
+
     } catch (err) {
       console.error('Error posting comment:', err);
       alert(err.message);
     }
   };
 
+
+  // DELETE COMMENT
   const handleDeleteComment = async (commentId) => {
     const token = localStorage.getItem('token');
+
     if (!token) {
       alert('You must be logged in.');
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    if (!window.confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
 
     try {
-      const res = await fetch(`${API_URL}/api/posts/${id}/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const res = await fetch(
+        `${API_URL}/api/posts/${id}/comments/${commentId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
-      });
+      );
+
+      const data = await res.json();
 
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.message || 'Failed to delete comment');
       }
 
       fetchPost();
+
     } catch (err) {
       console.error('Error deleting comment:', err);
       alert(err.message);
     }
   };
 
+
   if (error) {
-    return <div className="main-content"><p className="empty-state" style={{ color: 'red' }}>Error: {error}</p></div>;
+    return (
+      <div className="main-content">
+        <p style={{ color: 'red' }}>
+          Error: {error}
+        </p>
+      </div>
+    );
   }
 
+
   if (!post) {
-    return <div className="main-content"><p className="empty-state">Loading...</p></div>;
+    return (
+      <div className="main-content">
+        <p>Loading...</p>
+      </div>
+    );
   }
+
+
+  const isPostOwner =
+    currentUserId &&
+    Number(post.authorId) === Number(currentUserId);
+
 
   return (
     <div className="main-content" style={{ maxWidth: '720px' }}>
-      <article className="post-card" style={{ cursor: 'default', boxShadow: 'none' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#09090b', marginBottom: '1rem' }}>{post.title}</h1>
-        <p style={{ color: '#71717a', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-          By {post.author?.username || 'Anonymous'} • {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : ''}
+
+      <article
+        className="post-card"
+        style={{
+          cursor: 'default',
+          boxShadow: 'none'
+        }}
+      >
+
+        <h1
+          style={{
+            fontSize: '2rem',
+            fontWeight: '800',
+            color: '#09090b',
+            marginBottom: '1rem'
+          }}
+        >
+          {post.title}
+        </h1>
+
+
+        <p
+          style={{
+            color: '#71717a',
+            fontSize: '0.9rem',
+            marginBottom: '1rem'
+          }}
+        >
+          By {post.author?.username || 'Anonymous'} • {
+            post.createdAt
+              ? new Date(post.createdAt).toLocaleDateString()
+              : ''
+          }
         </p>
-        <div style={{ color: '#27272a', lineHeight: '1.7', whiteSpace: 'pre-wrap', marginBottom: '2rem' }}>
+
+
+        {isPostOwner && (
+          <button
+            onClick={handleDeletePost}
+            style={{
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              marginBottom: '1.5rem'
+            }}
+          >
+            Delete Post
+          </button>
+        )}
+
+
+        <div
+          style={{
+            color: '#27272a',
+            lineHeight: '1.7',
+            whiteSpace: 'pre-wrap',
+            marginBottom: '2rem'
+          }}
+        >
           {post.content}
         </div>
 
-        <section style={{ borderTop: '1px solid #e4e4e7', paddingTop: '2rem' }}>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Comments</h3>
-          
-          <form onSubmit={handleCommentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-            <textarea 
-              placeholder="Write a comment..." 
-              value={commentText} 
-              onChange={(e) => setCommentText(e.target.value)} 
-              required 
+
+        <section
+          style={{
+            borderTop: '1px solid #e4e4e7',
+            paddingTop: '2rem'
+          }}
+        >
+
+          <h3
+            style={{
+              fontSize: '1.25rem',
+              marginBottom: '1rem'
+            }}
+          >
+            Comments
+          </h3>
+
+
+          <form
+            onSubmit={handleCommentSubmit}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '2rem'
+            }}
+          >
+
+            <textarea
+              placeholder="Write a comment..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              required
               rows="3"
-              style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid #e4e4e7', fontFamily: 'inherit' }}
+              style={{
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #e4e4e7',
+                fontFamily: 'inherit'
+              }}
             />
-            <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Post Comment</button>
+
+
+            <button
+              type="submit"
+              className="btn-primary"
+              style={{
+                alignSelf: 'flex-start'
+              }}
+            >
+              Post Comment
+            </button>
+
           </form>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}
+          >
+
             {post.comments && post.comments.length > 0 ? (
+
               post.comments.map((comment) => {
-                const commentUserId = comment.userId || comment.authorId;
-                const isOwner = currentUserId && Number(commentUserId) === Number(currentUserId);
+
+                const commentUserId =
+                  comment.userId || comment.authorId;
+
+                const isOwner =
+                  currentUserId &&
+                  Number(commentUserId) === Number(currentUserId);
+
 
                 return (
-                  <div key={comment.id} style={{ background: '#fafafa', padding: '1rem', borderRadius: '8px', border: '1px solid #e4e4e7', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+
+                  <div
+                    key={comment.id}
+                    style={{
+                      background: '#fafafa',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e4e4e7',
+                      display: 'flex',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+
                     <div>
-                      <p style={{ fontSize: '0.85rem', fontWeight: '600', color: '#09090b', marginBottom: '0.25rem' }}>
-                        {comment.user?.username || comment.author?.username || 'Anonymous'}
+
+                      <p
+                        style={{
+                          fontWeight: '600'
+                        }}
+                      >
+                        {comment.user?.username || 'Anonymous'}
                       </p>
-                      <p style={{ fontSize: '0.95rem', color: '#3f3f46' }}>{comment.content}</p>
+
+                      <p>
+                        {comment.content}
+                      </p>
+
                     </div>
+
+
                     {isOwner && (
-                      <button 
-                        onClick={() => handleDeleteComment(comment.id)} 
-                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+
+                      <button
+                        onClick={() =>
+                          handleDeleteComment(comment.id)
+                        }
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer'
+                        }}
                       >
                         Delete
                       </button>
+
                     )}
+
                   </div>
+
                 );
+
               })
+
             ) : (
-              <p style={{ color: '#71717a', fontSize: '0.9rem' }}>No comments yet.</p>
+
+              <p>
+                No comments yet.
+              </p>
+
             )}
+
           </div>
+
         </section>
+
+
       </article>
+
     </div>
   );
 }

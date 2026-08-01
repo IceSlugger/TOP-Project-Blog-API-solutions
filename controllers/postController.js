@@ -8,11 +8,13 @@ async function getAllPosts(req, res, next) {
       },
       orderBy: { createdAt: 'desc' }
     });
+
     res.json(posts);
   } catch (err) {
     next(err);
   }
 }
+
 
 async function getPostById(req, res, next) {
   try {
@@ -36,10 +38,12 @@ async function getPostById(req, res, next) {
     }
 
     res.json(post);
+
   } catch (err) {
     next(err);
   }
 }
+
 
 async function createPost(req, res, next) {
   try {
@@ -55,13 +59,60 @@ async function createPost(req, res, next) {
     });
 
     res.status(201).json(newPost);
+
   } catch (err) {
     next(err);
   }
 }
 
+
+// DELETE POST
+async function deletePost(req, res, next) {
+  try {
+    const postId = Number(req.params.id);
+
+    const post = await prisma.post.findUnique({
+      where: {
+        id: postId
+      }
+    });
+
+    if (!post) {
+      return res.status(404).json({
+        message: 'Post not found'
+      });
+    }
+
+
+    // Only allow the author to delete
+    if (post.authorId !== req.user.id) {
+      return res.status(403).json({
+        message: 'You can only delete your own posts'
+      });
+    }
+
+
+    await prisma.post.delete({
+      where: {
+        id: postId
+      }
+    });
+
+
+    res.json({
+      message: 'Post deleted successfully'
+    });
+
+
+  } catch (err) {
+    next(err);
+  }
+}
+
+
 module.exports = {
   getAllPosts,
   getPostById,
   createPost,
+  deletePost,
 };
